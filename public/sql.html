@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Manager - SQL</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="logo">DB Manager</a>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="tables.html" class="nav-link">Tables</a>
+            <a href="sql.html" class="nav-link active">SQL Playground</a>
+            <a href="index.html" class="nav-link" style="color: var(--danger)">Disconnect</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">SQL Playground</h2>
+
+        <div class="sql-tabs">
+            <button class="tab-btn active" onclick="setTab('DDL')">DDL</button>
+            <button class="tab-btn" onclick="setTab('DML')">DML</button>
+            <button class="tab-btn" onclick="setTab('DQL')">DQL</button>
+        </div>
+
+        <div class="card"
+            style="background: var(--card-bg); padding: 1.5rem; border-radius: 1rem; border: var(--glass-border);">
+            <div class="mb-4">
+                <label id="tabDesc" class="form-label" style="margin-bottom: 1rem; color: var(--primary);">Data
+                    Definition (CREATE, ALTER, DROP)</label>
+                <textarea id="sqlInput" class="sql-editor" placeholder="Enter your SQL query here..."></textarea>
+                <button class="btn" style="width: auto;" onclick="executeQuery()">Execute Query</button>
+            </div>
+
+            <div id="resultArea" class="hidden">
+                <h3 class="mb-4">Result</h3>
+                <div class="result-area" id="resultContent">
+                    <!-- Results here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentTab = 'DDL';
+        const placeholders = {
+            'DDL': 'CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(50));',
+            'DML': 'INSERT INTO users (id, name) VALUES (1, "John");',
+            'DQL': 'SELECT * FROM users;'
+        };
+
+        function setTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active');
+                if (b.innerText === tab) b.classList.add('active');
+            });
+
+            const desc = {
+                'DDL': 'Data Definition (CREATE, ALTER, DROP)',
+                'DML': 'Data Manipulation (INSERT, UPDATE, DELETE)',
+                'DQL': 'Data Query (SELECT)'
+            };
+            document.getElementById('tabDesc').textContent = desc[tab];
+            document.getElementById('sqlInput').placeholder = placeholders[tab];
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('sqlInput').value;
+            if (!query) return showToast('Please enter a query', 'error');
+
+            const resultArea = document.getElementById('resultArea');
+            const resultContent = document.getElementById('resultContent');
+
+            resultArea.classList.remove('hidden');
+            resultContent.innerHTML = '<p>Executing...</p>';
+
+            try {
+                const res = await api('/api/query', 'POST', { query });
+
+                if (currentTab === 'DQL' && Array.isArray(res.data)) {
+                    // Render table
+                    if (res.data.length === 0) {
+                        resultContent.innerHTML = '<p>No rows returned.</p>';
+                    } else {
+                        const cols = Object.keys(res.data[0]);
+                        const tableHtml = `
+                            <table>
+                                <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+                                <tbody>
+                                    ${res.data.map(row => `
+                                        <tr>${cols.map(c => `<td>${row[c]}</td>`).join('')}</tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                        resultContent.innerHTML = tableHtml;
+                    }
+                } else {
+                    // Render message
+                    resultContent.innerHTML = `
+                        <div style="color: var(--success); font-weight: bold;">Success</div>
+                        <p>${res.message}</p>
+                    `;
+                }
+
+            } catch (err) {
+                resultContent.innerHTML = `
+                    <div style="color: var(--danger); font-weight: bold;">Error</div>
+                    <p>${err.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+
+</html>

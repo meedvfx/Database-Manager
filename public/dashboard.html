@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Manager - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="logo">DB Manager</a>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link active">Dashboard</a>
+            <a href="tables.html" class="nav-link">Tables</a>
+            <a href="sql.html" class="nav-link">SQL Playground</a>
+            <a href="index.html" class="nav-link" style="color: var(--danger)">Disconnect</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">Database Overview</h2>
+        <div class="grid-stats" id="statsGrid">
+            <!-- Stats inserted here -->
+        </div>
+
+        <div class="stat-card">
+            <h3>Visual Distribution</h3>
+            <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="sizeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        async function loadStats() {
+            try {
+                const res = await api('/api/stats');
+                const stats = res.stats;
+                const grid = document.getElementById('statsGrid');
+
+                const items = [
+                    { label: 'Total Tables', value: stats.tableCount },
+                    { label: 'Total Size (MB)', value: stats.totalSizeMB },
+                    { label: 'Avg Table Size (MB)', value: stats.avgTableSizeMB },
+                    { label: 'Total Indexes', value: stats.indexCount },
+                    { label: 'Primary Keys', value: stats.pkCount },
+                    { label: 'Foreign Keys', value: stats.fkCount }
+                ];
+
+                grid.innerHTML = items.map(item => `
+                    <div class="stat-card">
+                        <div class="stat-value">${item.value}</div>
+                        <div class="stat-label">${item.label}</div>
+                    </div>
+                `).join('');
+
+                document.querySelector('h2').textContent = `Overview: ${stats.dbName}`;
+
+                // Render Chart
+                renderChart(stats.elementSizes);
+
+            } catch (err) {
+                if (err.message.includes('Not connected')) window.location.href = 'index.html';
+                console.error(err);
+            }
+        }
+
+        async function renderChart(tableSizes) {
+            const ctx = document.getElementById('sizeChart').getContext('2d');
+
+            const labels = tableSizes ? tableSizes.map(t => t.name) : [];
+            const data = tableSizes ? tableSizes.map(t => parseFloat(t.size).toFixed(2)) : [];
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Size (MB)',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadStats();
+    </script>
+</body>
+
+</html>

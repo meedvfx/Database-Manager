@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Manager - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h1 class="text-center mb-4" style="background: linear-gradient(to right, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">DB Manager</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Host</label>
+                    <input type="text" name="host" class="form-input" value="localhost" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="user" class="form-input" value="root" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Database Name</label>
+                    <input type="text" name="database" class="form-input" required>
+                </div>
+                <button type="submit" class="btn">Connect Database</button>
+            </form>
+        </div>
+    </div>
+    <script src="js/utils.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                await api('/api/connect', 'POST', data);
+                showToast('Connected! Redirecting...', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1000);
+            } catch (err) {
+                // Toaster handled by api() util
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Manager - Tables</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="logo">DB Manager</a>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="tables.html" class="nav-link active">Tables</a>
+            <a href="sql.html" class="nav-link">SQL Playground</a>
+            <a href="index.html" class="nav-link" style="color: var(--danger)">Disconnect</a>
+        </div>
+    </nav>
+
+    <div class="container split-view">
+        <div class="sidebar" id="tableList">
+            <!-- Table list -->
+        </div>
+        <div class="content-area">
+            <div id="welcomeMsg" class="text-center" style="margin: auto; color: var(--text-muted);">
+                <h3>Select a table to view details</h3>
+            </div>
+
+            <div id="tableView" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
+                <div class="flex justify-between mb-4">
+                    <h2 id="currentTableName">TableName</h2>
+                    <div>
+                        <button class="btn" style="width: auto;" onclick="switchTab('info')">Info</button>
+                        <button class="btn"
+                            style="width: auto; background: transparent; border: 1px solid var(--primary);"
+                            onclick="switchTab('content')">Content</button>
+                    </div>
+                </div>
+
+                <!-- Info Tab -->
+                <div id="infoTab" class="data-table-wrapper">
+                    <h3>Columns</h3>
+                    <table class="mb-4">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Type</th>
+                                <th>Null</th>
+                                <th>Key</th>
+                                <th>Default</th>
+                                <th>Extra</th>
+                            </tr>
+                        </thead>
+                        <tbody id="columnsBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Content Tab -->
+                <div id="contentTab" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="flex justify-between mb-4">
+                        <input type="text" placeholder="Search (logic pending)..." class="form-input"
+                            style="width: 200px;">
+                        <div class="flex">
+                            <button class="btn" style="width: auto; padding: 0.5rem;" onclick="prevPage()">
+                                << /button>
+                                    <span id="pageIndicator" style="color: var(--text-muted);">Page 1</span>
+                                    <button class="btn" style="width: auto; padding: 0.5rem;"
+                                        onclick="nextPage()">></button>
+                        </div>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table id="dataTable">
+                            <thead id="dataHeader"></thead>
+                            <tbody id="dataBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        let currentTable = null;
+        let currentPage = 1;
+
+        async function loadTables() {
+            const res = await api('/api/tables');
+            const list = document.getElementById('tableList');
+            list.innerHTML = res.tables.map(t => `<a class="table-list-item" onclick="selectTable('${t}')">${t}</a>`).join('');
+        }
+
+        async function selectTable(name) {
+            currentTable = name;
+            currentPage = 1;
+            document.getElementById('welcomeMsg').classList.add('hidden');
+            document.getElementById('tableView').classList.remove('hidden');
+            document.getElementById('currentTableName').textContent = name;
+
+            // Highlight active
+            document.querySelectorAll('.table-list-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Load Info by default
+            switchTab('info');
+        }
+
+        async function switchTab(tab) {
+            if (tab === 'info') {
+                document.getElementById('infoTab').classList.remove('hidden');
+                document.getElementById('contentTab').classList.add('hidden');
+                loadSchema(currentTable);
+            } else {
+                document.getElementById('infoTab').classList.add('hidden');
+                document.getElementById('contentTab').classList.remove('hidden');
+                // Ensure flex display is restored
+                document.getElementById('contentTab').style.display = 'flex';
+                loadContent(currentTable, currentPage);
+            }
+        }
+
+        async function loadSchema(table) {
+            const res = await api(`/api/tables/${table}/schema`);
+            const tbody = document.getElementById('columnsBody');
+            tbody.innerHTML = res.columns.map(c => `
+                <tr>
+                    <td>${c.Field}</td>
+                    <td>${c.Type}</td>
+                    <td>${c.Null}</td>
+                    <td>${c.Key}</td>
+                    <td>${c.Default || '-'}</td>
+                    <td>${c.Extra}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadContent(table, page) {
+            const res = await api(`/api/tables/${table}/content?page=${page}`);
+
+            // Render Headers
+            const thead = document.getElementById('dataHeader');
+            const tbody = document.getElementById('dataBody');
+
+            if (res.data.length === 0) {
+                thead.innerHTML = '';
+                tbody.innerHTML = '<tr><td colspan="100">No data found</td></tr>';
+                return;
+            }
+
+            const cols = Object.keys(res.data[0]);
+            thead.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+
+            tbody.innerHTML = res.data.map(row => `
+                <tr>${cols.map(c => `<td>${row[c]}</td>`).join('')}</tr>
+            `).join('');
+
+            document.getElementById('pageIndicator').textContent = `Page ${res.page} of ${res.totalPages}`;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadContent(currentTable, currentPage);
+            }
+        }
+        function nextPage() {
+            currentPage++;
+            loadContent(currentTable, currentPage);
+        }
+
+        loadTables();
+    </script>
+</body>
+
+</html>
