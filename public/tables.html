@@ -35,7 +35,7 @@
                     <div>
                         <button class="btn" style="width: auto;" onclick="switchTab('info')">Info</button>
                         <button class="btn"
-                            style="width: auto; background: transparent; border: 1px solid var(--primary);"
+                            style="width: auto; background: transparent; border: 1px solid var(--primary); color: var(--primary);"
                             onclick="switchTab('content')">Content</button>
                     </div>
                 </div>
@@ -61,14 +61,16 @@
                 <!-- Content Tab -->
                 <div id="contentTab" class="hidden" style="flex: 1; display: flex; flex-direction: column;">
                     <div class="flex justify-between mb-4">
-                        <input type="text" placeholder="Search (logic pending)..." class="form-input"
+                        <input type="text" placeholder="Search..." class="form-input"
                             style="width: 200px;">
                         <div class="flex">
                             <button class="btn" style="width: auto; padding: 0.5rem;" onclick="prevPage()">
-                                << /button>
-                                    <span id="pageIndicator" style="color: var(--text-muted);">Page 1</span>
-                                    <button class="btn" style="width: auto; padding: 0.5rem;"
-                                        onclick="nextPage()">></button>
+                                &lt;
+                            </button>
+                            <span id="pageIndicator" style="color: var(--text-muted);">Page 1</span>
+                            <button class="btn" style="width: auto; padding: 0.5rem;" onclick="nextPage()">
+                                &gt;
+                            </button>
                         </div>
                     </div>
                     <div class="data-table-wrapper">
